@@ -229,7 +229,7 @@ function nextCelebration() {
   const c = queue.shift(); if (!c) { $('celebrate').classList.remove('show'); return; }
   $('cEmoji').textContent = c[0]; $('cTitle').textContent = c[1]; $('cText').textContent = c[2];
   $('celebrate').classList.add('show'); confetti(c[3]); bounce();
-  if (navigator.vibrate) try { navigator.vibrate([60, 40, 60]); } catch {}
+  if (navigator.vibrate && (!navigator.userActivation || navigator.userActivation.hasBeenActive)) try { navigator.vibrate([60, 40, 60]); } catch {}
 }
 $('cClose').onclick = nextCelebration;
 function bounce() { const p = $('pet'); p.classList.remove('bounce'); void p.offsetWidth; p.classList.add('bounce'); }
@@ -334,10 +334,69 @@ $('sens').oninput = () => { S.sensitivity = +$('sens').value; save(); };
 $('resetBtn').onclick = () => { if (confirm('Reset all steps, history, and unlocks?')) { localStorage.removeItem(KEY); S = fresh(); $('goalInput').value = S.goal; render(true); say(pick(MSG.sleepy)); } };
 $('sens').title = 'Lower = more sensitive';
 
+// ---------- Android app mode (Health Connect / phone step sensor via a JS bridge) ----------
+// On the web this whole block is skipped. In the Android app, real step totals come from the
+// phone, so the browser motion counter and demo mode are hidden.
+const NATIVE = window.TortyAndroid;
+if (NATIVE) {
+  document.body.classList.add('native');
+  ['startBtn', 'demoBtn'].forEach(id => $(id).closest('.actions').style.display = 'none');
+  $('status').style.display = 'none'; document.querySelector('.note').style.display = 'none';
+  $('sens').closest('.row').style.display = 'none';
+  const card = document.createElement('section'); card.className = 'card srccard'; card.id = 'srcCard';
+  card.innerHTML = `<h2 id="srcTitle">👟 Steps</h2><p class="sub" id="srcMsg">Checking your steps…</p><div class="srcbtns" id="srcBtns"></div><p class="sub" id="srcSync"></p>`;
+  $('milestones').after(card);
+  $('srcBtns').onclick = e => { const b = e.target.closest('[data-act]'); if (b) NATIVE.action(b.dataset.act); };
+  const extra = document.createElement('div'); extra.className = 'row';
+  extra.innerHTML = `<button class="btn small ghost" id="previewBtn">🎉 Preview a celebration</button><button class="btn small ghost" id="privacyBtn">🔒 Privacy</button>`;
+  $('resetBtn').closest('.row').after(extra);
+  $('previewBtn').onclick = () => { const m = pick(MILESTONES); const [e, t, x] = MS_TEXT[m]; celebrate(e, t + ' (preview)', `${fmt(S.goal * m)} steps! ${x}`, m === 1); };
+  $('privacyBtn').onclick = () => NATIVE.action('privacy');
+  const origSave = $('saveGoal').onclick;
+  $('saveGoal').onclick = () => { origSave(); try { NATIVE.setGoal(S.goal); } catch {} };
+  try { NATIVE.setGoal(S.goal); } catch {}
+
+  let synced = !!S.nativeSynced;
+  window.tortyNative = {
+    onSteps(d) {
+      $('srcTitle').textContent = d.title;
+      $('srcMsg').textContent = d.message;
+      $('srcBtns').innerHTML = (d.actions || []).map(a => `<button class="btn small ${a.primary ? 'primary' : 'ghost'}" data-act="${a.id}">${a.label}</button>`).join('');
+      $('srcSync').textContent = d.source === 'none' ? '' : `Updated ${new Date(d.syncedAt).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})} · refreshes every minute while open`;
+      if (d.source === 'none') return;                  // no step source yet: keep what we have
+      rollover();
+      for (const [k, v] of Object.entries(d.history || {})) if (k !== S.today.date && k < S.today.date) {
+        const old = S.history[k]; S.history[k] = {steps: v, goal: old ? old.goal : S.goal};
+      }
+      if (d.date !== S.today.date) return;              // phone and game disagree on the date; wait for next sync
+      const before = S.today.steps, lvBefore = levelFor(S.total);
+      S.today.steps = Math.max(0, d.today);
+      S.total = Object.values(S.history).reduce((s, h) => s + (h.steps || 0), 0) + S.today.steps;
+      const p = S.today.steps / S.goal, lvAfter = levelFor(S.total);
+      const crossed = MILESTONES.filter(m => p >= m && !S.today.milestones.includes(m));
+      if (crossed.length) {                             // celebrate the biggest new milestone only
+        S.today.milestones.push(...crossed); const m = crossed[crossed.length - 1], [e, t, x] = MS_TEXT[m];
+        celebrate(e, t, `${fmt(S.goal * m)} steps! ${x}`, m === 1);
+        if (m === 1) try { NATIVE.goalReached(); } catch {}
+      }
+      if (!synced) {
+        synced = S.nativeSynced = true;
+        if (S.total > 0) celebrate('🐢', 'Torty found your steps!', `${fmt(S.total)} steps from your recent days count toward Torty's levels. You're already level ${lvAfter}!`, false);
+      } else if (lvAfter > lvBefore) {
+        const unlocked = Object.entries(REWARDS).flatMap(([t, rs]) => rs.filter(r => r.lv > lvBefore && r.lv <= lvAfter).map(r => r.name));
+        celebrate('🐢', `Level ${lvAfter}!`, unlocked.length ? `Torty unlocked: ${unlocked.join(', ')}. Check the wardrobe!` : 'Torty is growing stronger with every step. Slow and steady!', false);
+      }
+      if (S.today.steps > before) { walkingAnim(); if (Date.now() > bubbleLock) say(pick(Math.random() < .3 ? MSG.walking : MSG[moodFor(p)])); }
+      saveNow(); render(true);
+    },
+  };
+}
+
 // ---------- Boot ----------
 rollover(); render(true); say(pick(MSG[moodFor(S.today.steps / S.goal)]));
 setInterval(rollover, 30000); // catch local midnight while open
 window.addEventListener('pagehide', saveNow);
-if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
-window.__shelly = {state: () => S, addSteps, levelFor}; // handy for testing
+if (!NATIVE && 'serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
+window.__torty = window.__shelly = {state: () => S, addSteps, levelFor}; // handy for testing
+if (NATIVE) try { NATIVE.ready(); } catch {}
 })();

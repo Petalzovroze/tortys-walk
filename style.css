@@ -89,3 +89,6 @@ footer{text-align:center;color:var(--muted);font-size:12px;margin-top:16px}
 .toast.show{transform:translateX(-50%) translateY(0)}
 .floaty{position:absolute;z-index:4;font-weight:800;color:var(--mint2);pointer-events:none;animation:floaty 1s ease-out forwards}
 @keyframes floaty{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-40px)}}
+.srccard h2{margin-bottom:4px}
+.srcbtns{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
+.srcbtns .btn{flex:1 1 auto}
