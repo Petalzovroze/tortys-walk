@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#cdeccf">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Torty's Walk">
+<title>Torty's Walk 🐢</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="app">
+  <header class="top">
+    <div class="chip" id="levelChip">⭐ Lv <b id="level">1</b></div>
+    <h1>Torty's Walk</h1>
+    <div class="chip" id="streakChip">🔥 <b id="streak">0</b>d</div>
+  </header>
+
+  <div class="xpbar" aria-label="Level progress"><div id="xpFill"></div><span id="xpText"></span></div>
+
+  <section class="stage" id="stage">
+    <div class="bubble" id="bubble">Hi! I'm Torty. Slow and steady — shall we go for a stroll?</div>
+    <svg id="pet" viewBox="0 0 240 180" role="img" aria-label="Your tortoise, Torty"></svg>
+    <div class="ground"></div>
+  </section>
+
+  <section class="card ringcard">
+    <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
+      <circle class="ring-bg" cx="60" cy="60" r="52"/>
+      <circle class="ring-fg" id="ringFg" cx="60" cy="60" r="52"/>
+      <g id="ringTicks"></g>
+    </svg>
+    <div class="ringtext">
+      <div class="steps" id="steps" data-testid="steps">0</div>
+      <div class="goal">of <span id="goalText">10,000</span> steps</div>
+      <div class="pct" id="pct">0%</div>
+    </div>
+  </section>
+
+  <div class="milestones" id="milestones"></div>
+
+  <section class="actions">
+    <button class="btn primary" id="startBtn">👟 Start walking</button>
+    <button class="btn" id="demoBtn">🎮 Demo mode</button>
+  </section>
+  <p class="status" id="status">Tap <b>Start walking</b> and keep this page open while you walk.</p>
+  <p class="note">ℹ️ Browsers only count steps while this page is open and on screen. We'll try to keep your screen awake while counting.</p>
+
+  <section class="card">
+    <h2>🎁 Torty's wardrobe</h2>
+    <p class="sub" id="nextUnlock"></p>
+    <div class="tabs" id="tabs"></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section class="card">
+    <h2>📅 This week</h2>
+    <div class="week" id="week"></div>
+    <p class="sub" id="totals"></p>
+  </section>
+
+  <section class="card">
+    <h2>⚙️ Settings</h2>
+    <label class="row">Daily goal
+      <span><input type="number" id="goalInput" min="1000" max="50000" step="500" inputmode="numeric"> steps</span>
+    </label>
+    <label class="row">Step sensitivity
+      <input type="range" id="sens" min="0.6" max="2.4" step="0.1">
+    </label>
+    <div class="row"><button class="btn small" id="saveGoal">Save</button><button class="btn small ghost" id="resetBtn">Reset all data</button></div>
+  </section>
+  <footer>Made with 🥬 — slow and steady wins the race.</footer>
+</main>
+
+<div class="celebrate" id="celebrate" aria-live="polite"><div class="cbox"><div class="cemoji" id="cEmoji">🎉</div><div class="ctitle" id="cTitle"></div><div class="ctext" id="cText"></div><button class="btn primary small" id="cClose">Yay!</button></div></div>
+<div class="confetti" id="confetti"></div>
+<div class="toast" id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
